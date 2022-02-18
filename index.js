@@ -1,18 +1,22 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer");
 const session = require("express-session");
+const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 require("dotenv").config();
+const { mongoose } = require("./database/mongoose");
+const { user } = require("./database/models/user.model");
+const { client } = require("./database/models/client.model");
+
+// server settings
 const port = process.env.PORT || 3001;
-
 app = express();
-
+app.enable("trust proxy");
 app.listen(port, () => {
-  console.log("Running on port " + port + " ...");
+  console.log("RUNNING ON PORT " + port + " ...");
 });
-
 app.use(
   cors({
     origin: [
@@ -24,43 +28,126 @@ app.use(
     credentials: true,
   })
 );
-
+// production samesite = none // secure = true ..
+// development samesite = lax // secure = false ..
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
+app.use(
+  session({
+    key: "user",
+    resave: false,
+    secret: "AnytimeAnywhereMailer",
+    saveUninitialized: true,
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      maxAge: 1000 * 60 * 60 * 48,
+      sameSite: "lax",
+    },
+  })
+);
 
-let transporter = nodemailer.createTransport({
-  service: "SMTP",
-  auth: {
-    user: process.env.AUTH_EMAIL,
-    pass: process.env.AUTH_PASS,
-  },
+// server API'S
+
+// Auth
+app.get("/", (req, res) => {
+  res.send("RUNNING SERVER ON PORT: " + port);
 });
 
-const mailcss = {
-  background: `
-  style="background: rgb(99, 182, 199);
-  background: linear-gradient(
-  90deg,
-  rgba(99, 182, 199, 1) 0%,
-  rgba(99, 182, 199, 1) 48%,
-  rgba(99, 182, 199, 1) 100%
-  );
-  border-radius: 5px;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  color: white;"`,
-  body: `
-  style="background: white;
-  border-radius: 5px;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  color: black;"`,
-};
+app.post("/createAccount", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
 
-app.get("/", (req, res) => {
-  res.send("Running on port " + port + " ...");
+  const token = crypto.randomBytes(10).toString("hex");
+
+  const hash = bcrypt.hashSync(password, 10);
+
+  const newuser = new user({
+    email: email,
+    password: hash,
+  });
+  try {
+    newuser.save();
+
+    res.send("SUCCESS");
+  } catch (err) {
+    res.send("ERROR");
+    console.log(err);
+  }
+});
+
+app.post("/login", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  user.findOne({ email: email }, (err, user) => {
+    if (err) {
+      res.send("ACCOUNT NOT FOUND");
+    } else if (user) {
+      bcrypt.compare(password, user.password, (err, result) => {
+        if (err) {
+          res.send("ERROR");
+        } else {
+          if (result) {
+            req.session.user = {
+              connected: true,
+            };
+            res.send(req.session.user);
+          } else {
+            res.send("WRONG PASSWORD");
+          }
+        }
+      });
+    } else {
+      res.send("ERROR");
+    }
+  });
+});
+
+app.get("/login", (req, res) => {
+  if (req.session.user) {
+    res.send(req.session.user);
+  } else {
+    res.send({ connected: false });
+  }
+});
+
+app.post("/logout", (req, res) => {
+  req.session.destroy();
+});
+
+// Mailing
+app.post("/addclient", (req, res) => {
+  const companyName = req.body.companyName,
+    activity = req.body.activity,
+    ceoName = req.body.ceoName,
+    phone = req.body.phone,
+    email = req.body.email,
+    address = req.body.address;
+
+  newClient = new client({
+    companyName,
+    activity,
+    ceoName,
+    phone,
+    email,
+    address,
+  });
+
+  try {
+    newClient.save();
+    res.send("SUCCESS");
+  } catch (e) {
+    res.send("ERROR");
+  }
+});
+
+app.get("/mailslist", async (req, res) => {
+  const mailsList = await client.find({});
+  console.log(mailsList);
+});
+
+app.post("/sendmail", async (req, res) => {
+  res.send("SUCCESS");
 });
