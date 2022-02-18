@@ -4,7 +4,6 @@ const session = require("express-session");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
-const crypto = require("crypto");
 require("dotenv").config();
 const { mongoose } = require("./database/mongoose");
 const { user } = require("./database/models/user.model");
@@ -58,8 +57,6 @@ app.get("/", (req, res) => {
 app.post("/createAccount", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
-  const token = crypto.randomBytes(10).toString("hex");
 
   const hash = bcrypt.hashSync(password, 10);
 
@@ -143,11 +140,11 @@ app.post("/addclient", (req, res) => {
   }
 });
 
-app.get("/mailslist", async (req, res) => {
-  const mailsList = await client.find({});
-  console.log(mailsList);
-});
-
-app.post("/sendmail", async (req, res) => {
-  res.send("SUCCESS");
+app.get("/sendmails", async (req, res) => {
+  const clientsList = await client.find({});
+  var emails = [];
+  clientsList.map((client) => {
+    emails.push(client.email);
+  });
+  console.log(emails);
 });
