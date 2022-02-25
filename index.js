@@ -4,6 +4,8 @@ const session = require("express-session");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
+const mailer = require("./components/mailer");
+
 require("dotenv").config();
 const { mongoose } = require("./database/mongoose");
 const { user } = require("./database/models/user.model");
@@ -146,5 +148,70 @@ app.get("/sendmails", async (req, res) => {
   clientsList.map((client) => {
     emails.push(client.email);
   });
-  console.log(emails);
+  mailer.transporter.sendMail({
+    from: '"Anytime & Anywhere" <' + process.env.AUTH_EMAIL + ">",
+    to: email,
+    subject: "Activate account.",
+    text: "Follow the instructions to activate your account.",
+    html: "",
+  });
+});
+
+app.post("/getclients", async (req, res) => {
+  var currentPage;
+  var searchTerm;
+  var allPages = [];
+
+  if (req.body.currentPage) {
+    currentPage = req.body.currentPage;
+  } else {
+    currentPage = 1;
+  }
+  if (req.body.searchTerm) {
+    searchTerm = req.body.searchTerm;
+  } else {
+    searchTerm = "";
+  }
+
+  try {
+    const clients = await client
+      .find({
+        $or: [
+          {
+            companyName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
+          },
+          {
+            ceoName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
+          },
+        ],
+      })
+      .limit(10)
+      .skip((currentPage - 1) * 10)
+      .sort({ date: -1 })
+      .exec();
+
+    const count = await client.countDocuments({
+      firstName: { $regex: ".*" + searchTerm + ".*" },
+    });
+    let totalPages = Math.ceil(count / 10);
+
+    for (let i = 1; i <= totalPages; i++) {
+      allPages.push(i);
+    }
+    res.send({
+      clients,
+      allPages,
+    });
+  } catch (err) {
+    console.error(err.message);
+  }
+});
+
+app.post("/getclient", (req, res) => {
+  const id = req.body.id;
+  client.findById(id, (err, row) => {
+    if (row) {
+      res.send(row);
+    }
+  });
 });
