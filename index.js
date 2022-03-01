@@ -130,7 +130,7 @@ app.post("/logout", (req, res) => {
 app.post("/addclient", (req, res) => {
   const companyName = req.body.companyName,
     activity = req.body.activity,
-    ceoName = req.body.ceoName,
+    contactName = req.body.contactName,
     phone = req.body.phone,
     email = req.body.email,
     address = req.body.address;
@@ -138,7 +138,7 @@ app.post("/addclient", (req, res) => {
   newClient = new client({
     companyName,
     activity,
-    ceoName,
+    contactName,
     phone,
     email,
     address,
@@ -176,7 +176,7 @@ app.post("/getclients", async (req, res) => {
             companyName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
           },
           {
-            ceoName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
+            contactName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
           },
         ],
       })
