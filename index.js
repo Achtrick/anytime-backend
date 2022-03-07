@@ -127,10 +127,47 @@ app.post("/logout", (req, res) => {
 });
 
 // Mailing
+app.put("/updateclient", (req, res) => {
+  const id = req.body.id,
+    companyName = req.body.companyName,
+    activity = req.body.activity,
+    ceoName = req.body.ceoName,
+    phone = req.body.phone,
+    email = req.body.email,
+    address = req.body.address;
+
+  const updatedClient = {};
+
+  if (companyName !== "") {
+    updatedClient.companyName = companyName;
+  }
+  if (activity !== "") {
+    updatedClient.activity = activity;
+  }
+  if (ceoName !== "") {
+    updatedClient.ceoName = ceoName;
+  }
+  if (phone) {
+    updatedClient.phone = phone;
+  }
+  if (email !== "") {
+    updatedClient.email = email;
+  }
+  if (address !== "") {
+    updatedClient.address = address;
+  }
+  try {
+    client.findByIdAndUpdate(id, updatedClient);
+    res.send("SUCCESS");
+  } catch (e) {
+    res.send("ERROR");
+  }
+});
+
 app.post("/addclient", (req, res) => {
   const companyName = req.body.companyName,
     activity = req.body.activity,
-    contactName = req.body.contactName,
+    ceoName = req.body.ceoName,
     phone = req.body.phone,
     email = req.body.email,
     address = req.body.address;
@@ -138,7 +175,7 @@ app.post("/addclient", (req, res) => {
   newClient = new client({
     companyName,
     activity,
-    contactName,
+    ceoName,
     phone,
     email,
     address,
@@ -176,7 +213,7 @@ app.post("/getclients", async (req, res) => {
             companyName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
           },
           {
-            contactName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
+            ceoName: { $regex: ".*" + searchTerm + ".*", $options: "i" },
           },
         ],
       })
@@ -207,6 +244,17 @@ app.post("/getclient", (req, res) => {
   client.findById(id, (err, row) => {
     if (row) {
       res.send(row);
+    }
+  });
+});
+
+app.delete(`/deleteclient:id`, (req, res) => {
+  const id = req.params.id;
+  client.findByIdAndRemove(id, (err) => {
+    if (err) {
+      res.send("ERROR");
+    } else {
+      res.send("SUCCESS");
     }
   });
 });
